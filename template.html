@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{title}</title>
+</head>
+
+<body>
+
+  {article}
+
+<script type="text/javascript" src="MathJax.js?config=TeX-MML-AM_HTMLorMML&locale=en"></script>
+<script type="text/x-mathjax-config"> 
+	MathJax.Hub.Config({
+	  tex2jax: {
+		inlineMath: [['$$','$$'], ['\\(','\\)']]
+       },
+	    TeX: {
+            extensions: ["cancel.js"]
+        },
+        "HTML-CSS": {
+			preferredFont: "STIX",
+			width: "container",
+			mtextFontInherit: true,
+            
+		},
+	});
+	MathJax.Hub.Queue(function() {
+		window.view.responsive.fixElementsOverflow();
+	});
+</script>
+
+</body>
+</html>
