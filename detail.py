@@ -1,7 +1,8 @@
 import requests
 import requests_cache
 import lxml.html
-
+from bs4 import BeautifulSoup
+import localise
 with open("template.html") as f:
     template=f.read()
 
@@ -27,7 +28,8 @@ def handle_lesson(page):
         video.attrib['src'] = "/content/storage/{}/{}/{}.mp4".format(nodehash[0], nodehash[1], nodehash)
         
     new_html = template.replace("{name}", page.name).replace("{article}", lxml.html.tostring(article).decode('utf-8'))
-    return new_html, video_nodes
+    local_soup = localise.make_local_html(BeautifulSoup(new_html, "html5lib"), page.url)
+    return local_soup, video_nodes
     # acquire videos and images, make nice CSS
     # <iframe src="youtube"></iframe>
     

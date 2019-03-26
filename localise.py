@@ -11,21 +11,16 @@ import urllib3
 urllib3.disable_warnings()
 requests_cache.install_cache()
 
-DOMAIN = "artsedge.kennedy-center.org"
+DOMAINS = ["www.mathplanet.com", ""]
 LINK_ATTRIBUTES = ["src", "href"]
 DOWNLOAD_FOLDER = "downloads"
-sample_url = "https://artsedge.kennedy-center.org/educators/lessons/grade-9-12/Arthur_Miller_and_The_Crucible"
 
-response = requests.get(sample_url)
-soup = BeautifulSoup(response.content, "html5lib")
 
 """
 TODO LIST:
 fix local anchors (even if they don't appear local)
 correctly mangle links beginning with ~ -- i.e. ones with no domain
 """
-
-print ("_")
 
 def make_links_absolute(soup, base_url):
     for r in get_resources(soup):
@@ -54,6 +49,7 @@ def ext_from_mime_type(mime_type):
     return mime[mime_type][0]
 
 def get_resources(soup):
+    """identify the potential resources -- i.e. src and href links"""
     def is_valid_tag(tag):
         if not any(link in tag.attrs for link in LINK_ATTRIBUTES):
             return False
@@ -69,8 +65,15 @@ def get_resources(soup):
         resources.update(l)
     return resources
 
-
 def make_local(soup, page_url):
+    # currently broken due to lack of nice_html function
+    new_soup = make_local_html(soup, page_url)
+    html = nice_html(new_soup)
+    with codecs.open(DOWNLOAD_FOLDER+"/index.html", "wb") as f:
+        f.write(html)    
+    return finalise_zip_file()
+
+def make_local_html(soup, page_url):
     def full_url(url):
         if urlparse(url).scheme == "":
             url = urljoin("https://", url)
@@ -89,14 +92,14 @@ def make_local(soup, page_url):
         pass
 
     make_links_absolute(soup, page_url)
-    resources = get_resources(soup)
-
+    
     try:
         os.mkdir(DOWNLOAD_FOLDER)
     except FileExistsError:
         pass
 
-    raw_url_list = [resource.attrs.get('href') or resource.attrs.get('src') for resource in resources if "mailto:"]
+    resources = get_resources(soup)
+    raw_url_list = [resource.attrs.get('href') or resource.attrs.get('src') for resource in resources]
     url_list = [x for x in raw_url_list if not x.startswith("mailto:")]
     url_list = [full_url(url) for url in url_list]
 
@@ -104,23 +107,21 @@ def make_local(soup, page_url):
     resource_filenames = {}
 
     # download content
-    # todo: don't download offsite a's?
 
     for resource in resources:
         for attribute in LINK_ATTRIBUTES:
             attribute_value = full_url(resource.attrs.get(attribute))
             if attribute_value and attribute_value in url_list:
-                if attribute_value.startswith("mailto"):
+                if attribute_value.startswith("mailto"):  # skip over emails
                     continue
-                if resource.name == "a" and urlparse(attribute_value).netloc not in (DOMAIN, "", "www.kennedy-center.org"):
-                    #print (urlparse(attribute_value).netloc)
-                    # print ("rewriting non-local URL {} in {}".format(attribute_value, resource.name))
+                if resource.name == "a" and urlparse(attribute_value).netloc not in DOMAINS:
+                    # rewrite URL as a written hyperlink
                     new_tag = soup.new_tag("span")
                     u = soup.new_tag("u")
                     u.insert(0, resource.text)
                     new_tag.insert(0, " (url:\xa0{})".format(resource.attrs['href']))
                     new_tag.insert(0, u)
-                    resource.replaceWith(new_tag)  # TODO -- this might mess up the iteration?
+                    resource.replaceWith(new_tag)  # note -- this might mess up the iteration, but I haven't seen it yet
                     continue
 
                 else:
@@ -148,56 +149,23 @@ def make_local(soup, page_url):
                     resource.attrs[attribute] = resource_filenames[attribute_value]
                     continue
 
-    html = nice_html(soup)
 
-    with codecs.open(DOWNLOAD_FOLDER+"/index.html", "wb") as f:
-        f.write(html)
-        
     # add modified CSS file
     os.mkdir(DOWNLOAD_FOLDER+"/resources")
     shutil.copy("main.css", DOWNLOAD_FOLDER+"/resources")
+    
+    return soup
 
-    # create zip file
+def finalise_zip_file():
     zipfile_name = shutil.make_archive("__"+DOWNLOAD_FOLDER+"/"+hashed_url(page_url), "zip", # automatically adds .zip extension!
                         DOWNLOAD_FOLDER)
 
-    # delete contents of downloadfolder
     assert "downloads" in DOWNLOAD_FOLDER
     shutil.rmtree(DOWNLOAD_FOLDER)
-    print(os.path.getsize(zipfile_name))
-    
-
     return zipfile_name
 
-
-def nice_html(soup):
-    # TODO: download urls, mangle p.printTabHeadline to h2, mangle urls
-    prefix = b"""
-    <html>
-    <head>
-      <link rel="stylesheet" type="text/css" href="resources/main.css">
-      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    </head>
-    <body>
-      <div class="main">
-      <div class="wrap">
-      <div class="content">
-    """
-
-    suffix = b"""
-    </div></div></div>
-    </body>
-    </html>"""
-
-
-
-    output = []
-    output.append(prefix)
-    for tab in soup.find_all("div", {'class': 'tabscontent'}):
-        output.append(str(tab).encode('utf-8'))
-    output.append(suffix)
-    return b"\n\n<!-- dragon -->\n\n".join(output)
-
-
 if __name__ == "__main__":
+    sample_url = "https://www.mathplanet.com/education/pre-algebra/graphing-and-functions/graphing-linear-inequalities"
+    response = requests.get(sample_url)
+    soup = BeautifulSoup(response.content, "html5lib")
     print (make_local(soup, sample_url))
