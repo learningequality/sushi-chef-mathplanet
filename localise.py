@@ -14,6 +14,7 @@ requests_cache.install_cache()
 DOMAINS = ["www.mathplanet.com", ""]
 LINK_ATTRIBUTES = ["src", "href"]
 DOWNLOAD_FOLDER = "downloads"
+SKIP_HTML = True
 
 
 """
@@ -109,6 +110,8 @@ def make_local_html(soup, page_url):
     # download content
 
     for resource in resources:
+        if resource.attrs.get("localise") == "skip":  # skip over resources we've already modified
+            continue
         for attribute in LINK_ATTRIBUTES:
             attribute_value = full_url(resource.attrs.get(attribute))
             if attribute_value and attribute_value in url_list:
@@ -136,6 +139,8 @@ def make_local_html(soup, page_url):
                         except KeyError:
                             content_type = ""
                         extension = ext_from_mime_type(content_type)
+                        if "htm" in extension and SKIP_HTML: 
+                            continue
                         filename = hashed_url(attribute_value)+extension
 
                         with open(DOWNLOAD_FOLDER+"/"+filename, "wb") as f:

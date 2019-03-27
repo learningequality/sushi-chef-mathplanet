@@ -1,10 +1,31 @@
 import requests
 import requests_cache
 import lxml.html
+import hashlib
 from bs4 import BeautifulSoup
+from ricecooker.classes.files import WebVideoFile, HTMLZipFile
+from ricecooker.classes.nodes import VideoNode, HTML5AppNode
+from le_utils.constants.licenses import CC_BY_NC_ND
+
 import localise
-with open("template.html") as f:
-    template=f.read()
+
+from youtube_dl import YoutubeDL
+
+def youtube_info(url):
+    with YoutubeDL() as ydl:
+        return ydl.extract_info(url, download=False) # url, id, title
+
+def hash_file(filename):
+    raise RuntimeError # TODO -- delete this
+    # https://www.pythoncentral.io/hashing-files-with-python/
+    BLOCKSIZE = 65536
+    hasher = hashlib.sha1()
+    with open(filename, 'rb') as f:
+        buf = f.read(BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = f.read(BLOCKSIZE)
+    return hasher.hexdigest()
 
 class FakePage(object):
     def __init__(self, url):
@@ -12,8 +33,10 @@ class FakePage(object):
         self.url = url
     
 def get_video_node(url):
-    # TODO
-    return "Node", "sha1"
+    wvf = WebVideoFile(url, high_resolution=False)
+    info = youtube_info(url) # {id, title}
+    node = VideoNode(source_id=info['id'], title=info['title'], license=CC_BY_NC_ND, files=[wvf])
+    return node, wvf.get_filename()
 
 def handle_lesson(page):
     video_nodes = []
@@ -26,6 +49,7 @@ def handle_lesson(page):
     for video in videos:
         node, nodehash = get_video_node(video.attrib['src'])
         video.attrib['src'] = "/content/storage/{}/{}/{}.mp4".format(nodehash[0], nodehash[1], nodehash)
+        video.attrib['localise'] = "skip"
         
     new_html = template.replace("{name}", page.name).replace("{article}", lxml.html.tostring(article).decode('utf-8'))
     local_soup = localise.make_local_html(BeautifulSoup(new_html, "html5lib"), page.url)
@@ -33,13 +57,10 @@ def handle_lesson(page):
     # acquire videos and images, make nice CSS
     # <iframe src="youtube"></iframe>
     
+with open("template.html") as f:
+    template=f.read()
     
-
-
-sample_urls = [
-    "https://www.mathplanet.com/education/pre-algebra/discover-fractions-and-factors/powers-and-exponents", # has video
-    ]
-
-for url in sample_urls:
-    print(handle_lesson(FakePage(url)))
+if __name__ == "__main__":
+    sample_url = "https://www.mathplanet.com/education/pre-algebra/discover-fractions-and-factors/powers-and-exponents"
+    handle_lesson(FakePage(sample_url))
     

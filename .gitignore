@@ -104,6 +104,10 @@ venv.bak/
 .mypy_cache/
 _git
 cache.sqlite
+
+
 .ricecookerfilecache
 restore
 storage
+__pycache__/
+downloads/
