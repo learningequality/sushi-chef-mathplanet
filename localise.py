@@ -63,6 +63,7 @@ def get_resources(soup):
     resources = set()
     for attribute in LINK_ATTRIBUTES:
         l = soup.find_all(lambda tag: is_valid_tag(tag))
+        l = [x for x in l if x.get("localise") != "skip"]  # skip over resources we've already modified
         resources.update(l)
     return resources
 
@@ -117,6 +118,8 @@ def make_local_html(soup, page_url):
             if attribute_value and attribute_value in url_list:
                 if attribute_value.startswith("mailto"):  # skip over emails
                     continue
+                if attribute_value.startswith("javascript:"):
+                    continue
                 if resource.name == "a" and urlparse(attribute_value).netloc not in DOMAINS:
                     # rewrite URL as a written hyperlink
                     new_tag = soup.new_tag("span")
@@ -161,8 +164,11 @@ def make_local_html(soup, page_url):
     
     return soup
 
-def finalise_zip_file():
-    zipfile_name = shutil.make_archive("__"+DOWNLOAD_FOLDER+"/"+hashed_url(page_url), "zip", # automatically adds .zip extension!
+def finalise_zip_file(url):
+    def hashed_url(url):
+        return hashlib.sha1(url.encode('utf-8')).hexdigest() + guess_extension(url)
+    
+    zipfile_name = shutil.make_archive("__"+DOWNLOAD_FOLDER+"/"+hashed_url(url), "zip", # automatically adds .zip extension!
                         DOWNLOAD_FOLDER)
 
     assert "downloads" in DOWNLOAD_FOLDER
@@ -170,6 +176,7 @@ def finalise_zip_file():
     return zipfile_name
 
 if __name__ == "__main__":
+    raise RuntimeError
     sample_url = "https://www.mathplanet.com/education/pre-algebra/graphing-and-functions/graphing-linear-inequalities"
     response = requests.get(sample_url)
     soup = BeautifulSoup(response.content, "html5lib")

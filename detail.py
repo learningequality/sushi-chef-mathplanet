@@ -35,7 +35,7 @@ class FakePage(object):
 def get_video_node(url):
     wvf = WebVideoFile(url, high_resolution=False)
     info = youtube_info(url) # {id, title}
-    node = VideoNode(source_id=info['id'], title=info['title'], license=CC_BY_NC_ND, files=[wvf])
+    node = VideoNode(source_id=info['id'], title=info['title'], license=CC_BY_NC_ND, copyright_holder="Mathplanet", files=[wvf])
     return node, wvf.get_filename()
 
 def handle_lesson(page):
@@ -45,17 +45,31 @@ def handle_lesson(page):
     root = lxml.html.fromstring(html)
     article = root.xpath("//article[@id='article']")[0]
     videos = article.xpath("//iframe")
-    images = article.xpath("//img")
+    for element in article.xpath("//div[@class='small related']"):
+        element.drop_tree()
+    for element in article.xpath("//div[@id='share']"):
+        element.drop_tree()
     for video in videos:
         node, nodehash = get_video_node(video.attrib['src'])
-        video.attrib['src'] = "/content/storage/{}/{}/{}.mp4".format(nodehash[0], nodehash[1], nodehash)
+        video_nodes.append(node)
+        video.attrib['src'] = "/content/storage/{}/{}/{}".format(nodehash[0], nodehash[1], nodehash)
         video.attrib['localise'] = "skip"
+        video.attrib['controls'] = "True"
+        video.tag = "video"
         
     new_html = template.replace("{name}", page.name).replace("{article}", lxml.html.tostring(article).decode('utf-8'))
     local_soup = localise.make_local_html(BeautifulSoup(new_html, "html5lib"), page.url)
-    return local_soup, video_nodes
-    # acquire videos and images, make nice CSS
-    # <iframe src="youtube"></iframe>
+    
+    with open(localise.DOWNLOAD_FOLDER+"/index.html", "wb") as f:
+        f.write(local_soup.prettify().encode('utf-8'))
+    
+    shutil.copytree("mathjax", localise.DOWNLOAD_FOLDER)
+    
+    zip_name = localise.finalise_zip_file(page.url)
+    zip_file = HTMLZipFile(zip_name)
+    zip_node = HTML5AppNode(source_id=page.url, title=page.name, license=CC_BY_NC_ND, 
+                           copyright_holder='Mathplanet', files=[zip_file])
+    return zip_node, video_nodes
     
 with open("template.html") as f:
     template=f.read()
