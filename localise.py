@@ -75,7 +75,7 @@ def make_local(soup, page_url):
         f.write(html)    
     return finalise_zip_file()
 
-def make_local_html(soup, page_url):
+def make_local_html(soup, page_url, make_dir=None):
     def full_url(url):
         if urlparse(url).scheme == "":
             url = urljoin("https://", url)
@@ -95,10 +95,13 @@ def make_local_html(soup, page_url):
 
     make_links_absolute(soup, page_url)
     
-    try:
-        os.mkdir(DOWNLOAD_FOLDER)
-    except FileExistsError:
-        pass
+    if make_dir:
+        make_dir()
+    else:
+        try:
+            os.mkdir(DOWNLOAD_FOLDER)
+        except FileExistsError:
+            pass
 
     resources = get_resources(soup)
     raw_url_list = [resource.attrs.get('href') or resource.attrs.get('src') for resource in resources]
@@ -158,7 +161,7 @@ def make_local_html(soup, page_url):
                     continue
 
 
-    # add modified CSS file
+    # add modified CSS file -- moved out 
     os.mkdir(DOWNLOAD_FOLDER+"/resources")
     shutil.copy("main.css", DOWNLOAD_FOLDER+"/resources")
     

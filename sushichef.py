@@ -20,7 +20,7 @@ class MathplanetChef(SushiChef):
         'CHANNEL_SOURCE_ID': 'mathplanet',         # channel's unique id
         'CHANNEL_TITLE': 'Mathplanet',
         'CHANNEL_LANGUAGE': 'en',                          # Use language codes from le_utils
-        'CHANNEL_THUMBNAIL': 'mathplanet.jpg',
+        'CHANNEL_THUMBNAIL': 'https://github.com/learningequality/sushi-chef-mathplanet/raw/master/mathplanet.png',
         'CHANNEL_DESCRIPTION': 'Take our high school math courses in Pre-algebra, Algebra 1 & 2 and Geometry, and practice tests for the SAT and ACT. Since maths is the same all over the world, we welcome everybody to study math with us.',  # (optional) description of the channel (optional)
     }
 
@@ -41,7 +41,7 @@ class MathplanetChef(SushiChef):
                     article_node.add_child(htmlnode)
                     for video in videonodes:
                         article_node.add_child(video)
-                return channel # outdent for real version
+                        return channel # outdent for real version
 
 
 if __name__ == '__main__':
