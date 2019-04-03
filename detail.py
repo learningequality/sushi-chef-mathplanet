@@ -3,6 +3,7 @@ import requests_cache
 import lxml.html
 import hashlib
 import shutil
+import os
 from bs4 import BeautifulSoup
 from ricecooker.classes.files import WebVideoFile, HTMLZipFile
 from ricecooker.classes.nodes import VideoNode, HTML5AppNode
@@ -16,18 +17,6 @@ def youtube_info(url):
     with YoutubeDL() as ydl:
         return ydl.extract_info(url, download=False) # url, id, title
 
-def hash_file(filename):
-    raise RuntimeError # TODO -- delete this
-    # https://www.pythoncentral.io/hashing-files-with-python/
-    BLOCKSIZE = 65536
-    hasher = hashlib.sha1()
-    with open(filename, 'rb') as f:
-        buf = f.read(BLOCKSIZE)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = f.read(BLOCKSIZE)
-    return hasher.hexdigest()
-
 class FakePage(object):
     def __init__(self, url):
         self.name = "[NAME: {}]".format(url)
@@ -40,12 +29,13 @@ def get_video_node(url):
     return node, wvf.get_filename()
 
 def handle_lesson(page):
-    def mathjax():
-        shutil.copytree("mathjax", localise.DOWNLOAD_FOLDER)
-
+    def makefolder():
+        os.mkdir(localise.DOWNLOAD_FOLDER)
+        
     video_nodes = []
     images = []
-    html = requests.get(page.url).content
+    html = requests.get(page.url).content  # html is bytes; â‰¤/â‰¥ - 
+    html = html.decode('utf-8') # force conversion to UTF-8 because lxml isn't.
     root = lxml.html.fromstring(html)
     article = root.xpath("//article[@id='article']")[0]
     videos = article.xpath("//iframe")
@@ -56,14 +46,18 @@ def handle_lesson(page):
     for video in videos:
         node, nodehash = get_video_node(video.attrib['src'])
         if nodehash: # skip if no filename because video probably broke
+            # continue # skip video for now
             video_nodes.append(node)
             video.attrib['src'] = "/content/storage/{}/{}/{}".format(nodehash[0], nodehash[1], nodehash)
             video.attrib['localise'] = "skip"
             video.attrib['controls'] = "True"
             video.tag = "video"
-
-    new_html = template.replace("{name}", page.name).replace("{article}", lxml.html.tostring(article).decode('utf-8'))
-    local_soup = localise.make_local_html(BeautifulSoup(new_html, "html5lib"), page.url, mathjax)
+            
+    article_out = lxml.html.tostring(article)
+    article_decode = article_out.decode('utf-8')
+    
+    new_html = template.replace("{name}", page.name).replace("{article}", article_decode)
+    local_soup = localise.make_local_html(BeautifulSoup(new_html, "html5lib"), page.url, makefolder)
     tex_html = local_soup.prettify()
     svg_html = tex_to_svg.html_to_svg(tex_html)
 
@@ -83,6 +77,6 @@ with open("template.html") as f:
     template=f.read()
 
 if __name__ == "__main__":
-    sample_url = "https://www.mathplanet.com/education/pre-algebra/discover-fractions-and-factors/powers-and-exponents"
+    sample_url = "https://www.mathplanet.com/education/pre-algebra/introducing-algebra/inequalities"
     handle_lesson(FakePage(sample_url))
 

@@ -41,7 +41,7 @@ class MathplanetChef(SushiChef):
                     article_node.add_child(htmlnode)
                     for video in videonodes:
                         article_node.add_child(video)
-                        return channel # outdent for real version
+        return channel # outdent for real version
 
 
 if __name__ == '__main__':
