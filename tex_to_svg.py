@@ -8,27 +8,22 @@ import lxml.html
 from html import unescape
 
 replacements = {"\C=2\pi r": "C=2\pi r",
-                "\color{green} {-4\}\cdot \left (3x+y\right )=9\cdot {\color{green} {-4}": \
-                    "\color{green} {-4}\cdot \left (3x+y\right )=9\cdot {\color{green} {-4}}",
-                "\left\{\begin{matrix} 2y - 4x = 2 \\ y = -x + 4 \end{matrix}\right": \
-                    "\left\{\begin{matrix} 2y - 4x = 2 \\ y = -x + 4 \end{matrix}\right.,
-                "\m\angle A=\frac{1}{2}(m\overline{DE}-m\overline{BC} )": \
-                    "\angle A=\frac{1}{2}(m\overline{DE}-m\overline{BC} )",
+                "\color{green} {-4\}\cdot \left (3x+y\right )=9\cdot {\color{green} {-4}": "\color{green} {-4}\cdot \left (3x+y\right )=9\cdot {\color{green} {-4}}",
+                "\left\{\begin{matrix} 2y - 4x = 2 \\ y = -x + 4 \end{matrix}\right": "\left\{\begin{matrix} 2y - 4x = 2 \\ y = -x + 4 \end{matrix}\right.",
+                "\m\angle A=\frac{1}{2}(m\overline{DE}-m\overline{BC} )": "m\angle A=\frac{1}{2}(m\overline{DE}-m\overline{BC} )",
                 }
 
 def node_tex_svg(tex):
     # my node setup makes no sense -- you can probably delete cwd entirely in a sensible setup
-    # the space is there to stop problems with "-|7" being interpreted as an option.
-    if tex in replacements:
+    # the space is there to stop problems with "-|7" being interpreted as an option, should probably just use "--"
+    if tex.strip() in replacements:
+        print ("made replacement")
+        print(tex)
         tex = replacements[tex]
     svg = subprocess.check_output(["node", "texsvg.js", " "+tex], cwd="/home/dragon/chef/math")
     if not (svg.startswith(b"<svg")):
-        with open("errorlog", "a") as f:
-            f.write("\n***\n")
-            f.write(tex)            
-            f.write("\n***\n")
-        raise
-    assert (svg.startswith(b"<svg")):
+        print ("FAIL ON:\n{}".format(tex))
+        return node_tex_svg(input().strip('\n'))
     return svg    
 
 def node_mml_svg(mml):
@@ -40,7 +35,7 @@ def node_mml_svg(mml):
             f.write("\n***\n")
             f.write(tex)            
             f.write("\n***\n")
-    assert (svg.startswith(b"<svg")):
+    assert (svg.startswith(b"<svg"))
     return svg
 
 def mmltosvg(html):
