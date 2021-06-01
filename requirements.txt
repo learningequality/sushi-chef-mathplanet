@@ -3,6 +3,6 @@ youtube_dl==2018.11.23
 requests==2.19.1
 lxml==4.2.3
 ricecooker==0.6.20
-urllib3==1.23
+urllib3==1.26.5
 le_utils==0.1.11
 beautifulsoup4==4.7.1
